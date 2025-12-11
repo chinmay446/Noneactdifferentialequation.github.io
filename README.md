@@ -1,1 +1,0 @@
-# Noneactdifferentialequation.github.io
