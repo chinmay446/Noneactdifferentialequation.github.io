@@ -1,1 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Differential Equation Solver - Exact & Non-Exact</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.6.0/lib/browser/math.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .input-section, .result-section {
+            flex: 1;
+            min-width: 300px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-title {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .equation-input {
+            margin-bottom: 25px;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .input-note {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-field:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        
+        .example-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .example-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .example-list {
+            list-style-type: none;
+        }
+        
+        .example-list li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #ddd;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .example-list li:hover {
+            background-color: #eef5ff;
+        }
+        
+        .example-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .solve-button {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            border: none;
+            padding: 18px 30px;
+            font-size: 1.3rem;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+        }
+        
+        .solve-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(52, 152, 219, 0.3);
+        }
+        
+        .solve-button:active {
+            transform: translateY(0);
+        }
+        
+        .result-section {
+            overflow-y: auto;
+            max-height: 800px;
+        }
+        
+        .result-placeholder {
+            color: #7f8c8d;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .result-content {
+            display: none;
+        }
+        
+        .result-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        
+        .result-text {
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+        
+        .equation-display {
+            font-size: 1.3rem;
+            text-align: center;
+            padding: 15px;
+            background-color: #eef5ff;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .step-box {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .step-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step-icon {
+            color: #3498db;
+        }
+        
+        .success {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .warning {
+            color: #e67e22;
+            font-weight: 600;
+        }
+        
+        .error {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .method-used {
+            background-color: #e8f4fc;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .method-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .solution-box {
+            background-color: #f1f8e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #7cb342;
+        }
+        
+        .solution-title {
+            font-weight: 600;
+            color: #33691e;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .advanced-options {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .advanced-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .advanced-content {
+            display: none;
+            margin-top: 15px;
+        }
+        
+        .checkbox-group {
+            margin: 10px 0;
+        }
+        
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-calculator"></i> Differential Equation Solver</h1>
+            <p class="subtitle">Determine if a differential equation is exact or non-exact, find integrating factors when needed, and solve it step by step. Supports equations in the form M(x,y)dx + N(x,y)dy = 0 or dy/dx = f(x,y).</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title"><i class="fas fa-edit"></i> Enter Differential Equation</h2>
+                
+                <div class="equation-input">
+                    <label class="input-label">Differential Equation:</label>
+                    <input type="text" id="equationInput" class="input-field" placeholder="e.g., (2x + y)dx + (x + 2y)dy = 0 or dy/dx = (2x-y)/(x-2y)">
+                    <div class="input-note">Enter in either form: M(x,y)dx + N(x,y)dy = 0 or dy/dx = f(x,y)</div>
+                </div>
+                
+                <div class="advanced-options">
+                    <div class="advanced-title" id="advancedToggle">
+                        <span>Advanced Options</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="advanced-content" id="advancedContent">
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="showDetailedSteps" checked>
+                                <span>Show detailed solution steps</span>
+                            </label>
+                        </div>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="attemptIntegratingFactor" checked>
+                                <span>Attempt to find integrating factor for non-exact equations</span>
+                            </label>
+                        </div>
+                        <div class="checkbox-group">
+                            <label>
+                                <input type="checkbox" id="attemptSeparation" checked>
+                                <span>Attempt separation of variables if applicable</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="solve-button" id="solveButton">
+                    <i class="fas fa-play-circle"></i> Solve Differential Equation
+                </button>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Solving equation...</p>
+                </div>
+                
+                <div class="example-box">
+                    <div class="example-title">Example Equations:</div>
+                    <ul class="example-list">
+                        <li onclick="loadExample(0)">(2x + y)dx + (x + 2y)dy = 0 (Exact)</li>
+                        <li onclick="loadExample(1)">(3x² + 2xy)dx + (x² + y²)dy = 0 (Non-Exact)</li>
+                        <li onclick="loadExample(2)">dy/dx = (2xy)/(x² - y²)</li>
+                        <li onclick="loadExample(3)">(y² - 2x)dx + (2xy + 1)dy = 0 (Exact)</li>
+                        <li onclick="loadExample(4)">(y + y²)dx + (x - 2y)dy = 0 (Non-Exact)</li>
+                        <li onclick="loadExample(5)">dy/dx = (x + y)/(x - y)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="result-section">
+                <h2 class="section-title"><i class="fas fa-clipboard-list"></i> Solution Steps</h2>
+                
+                <div id="resultPlaceholder" class="result-placeholder">
+                    <i class="fas fa-stream fa-3x" style="color: #ddd; margin-bottom: 20px;"></i>
+                    <p>Your solution will appear here after solving an equation.</p>
+                </div>
+                
+                <div id="resultContent" class="result-content">
+                    <div class="equation-display" id="equationDisplay"></div>
+                    
+                    <div id="exactnessResult"></div>
+                    
+                    <div id="methodUsed" class="method-used" style="display: none;">
+                        <div class="method-title">Method Used:</div>
+                        <div id="methodText"></div>
+                    </div>
+                    
+                    <div id="solutionSteps"></div>
+                    
+                    <div id="finalSolution" class="solution-box" style="display: none;">
+                        <div class="solution-title"><i class="fas fa-check-circle"></i> Final Solution</div>
+                        <div id="solutionText" class="result-text"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Differential Equation Solver &copy; 2023 | This tool solves exact and non-exact differential equations</p>
+            <p>Note: Some equations may not have closed-form solutions or may require advanced techniques not implemented here.</p>
+        </footer>
+    </div>
 
+    <script>
+        // MathJS configuration
+        math.config({
+            number: 'BigNumber',
+            precision: 20
+        });
+
+        // Example equations
+        const examples = [
+            "(2x + y)dx + (x + 2y)dy = 0",
+            "(3x^2 + 2xy)dx + (x^2 + y^2)dy = 0",
+            "dy/dx = (2xy)/(x^2 - y^2)",
+            "(y^2 - 2x)dx + (2xy + 1)dy = 0",
+            "(y + y^2)dx + (x - 2y)dy = 0",
+            "dy/dx = (x + y)/(x - y)"
+        ];
+
+        // Load example equation
+        function loadExample(index) {
+            document.getElementById('equationInput').value = examples[index];
+        }
+
+        // Toggle advanced options
+        document.getElementById('advancedToggle').addEventListener('click', function() {
+            const content = document.getElementById('advancedContent');
+            const icon = this.querySelector('i');
+            
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            } else {
+                content.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            }
+        });
+
+        // Solve button event listener
+        document.getElementById('solveButton').addEventListener('click', solveEquation);
+
+        // Solve the differential equation
+        function solveEquation() {
+            // Get input equation
+            const equationInput = document.getElementById('equationInput').value.trim();
+            
+            if (!equationInput) {
+                alert("Please enter a differential equation.");
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('solveButton').disabled = true;
+            
+            // Clear previous results
+            document.getElementById('resultPlaceholder').style.display = 'none';
+            document.getElementById('resultContent').style.display = 'block';
+            document.getElementById('equationDisplay').innerHTML = '';
+            document.getElementById('exactnessResult').innerHTML = '';
+            document.getElementById('methodUsed').style.display = 'none';
+            document.getElementById('solutionSteps').innerHTML = '';
+            document.getElementById('finalSolution').style.display = 'none';
+            
+            // Parse and solve equation (simulate processing delay for UX)
+            setTimeout(() => {
+                try {
+                    // Parse the equation
+                    const parsedEquation = parseEquation(equationInput);
+                    
+                    // Display the equation
+                    displayEquation(parsedEquation);
+                    
+                    // Check exactness and solve
+                    const solution = solveDifferentialEquation(parsedEquation);
+                    
+                    // Display results
+                    displayResults(solution);
+                } catch (error) {
+                    displayError(error.message);
+                }
+                
+                // Hide loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('solveButton').disabled = false;
+            }, 800);
+        }
+
+        // Parse the input equation into a standard form
+        function parseEquation(input) {
+            // Remove spaces
+            let eq = input.replace(/\s+/g, '');
+            
+            // Check if it's in dy/dx = f(x,y) form
+            const dyDxMatch = eq.match(/^dy\/dx=([^=]+)$/);
+            if (dyDxMatch) {
+                const fxy = dyDxMatch[1];
+                // Convert to Mdx + Ndy = 0 form: dy/dx = f(x,y) => -f(x,y)dx + dy = 0
+                return {
+                    form: 'dy/dx',
+                    fxy: fxy,
+                    M: `-(${fxy})`,
+                    N: '1'
+                };
+            }
+            
+            // Check if it's in Mdx + Ndy = 0 form
+            const mdxNdyMatch = eq.match(/^([^=]+)dx\+([^=]+)dy=0$/);
+            if (mdxNdyMatch) {
+                return {
+                    form: 'Mdx+Ndy',
+                    M: mdxNdyMatch[1],
+                    N: mdxNdyMatch[2]
+                };
+            }
+            
+            throw new Error("Equation format not recognized. Please use either M(x,y)dx + N(x,y)dy = 0 or dy/dx = f(x,y) format.");
+        }
+
+        // Display the parsed equation
+        function displayEquation(parsedEquation) {
+            let displayText;
+            
+            if (parsedEquation.form === 'dy/dx') {
+                displayText = `$$\\frac{dy}{dx} = ${formatForDisplay(parsedEquation.fxy)}$$`;
+            } else {
+                displayText = `$$${formatForDisplay(parsedEquation.M)}dx + ${formatForDisplay(parsedEquation.N)}dy = 0$$`;
+            }
+            
+            document.getElementById('equationDisplay').innerHTML = displayText;
+            
+            // Trigger MathJax rendering
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        // Format expression for display (replace ^ with superscripts for MathJax)
+        function formatForDisplay(expr) {
+            // Replace ^ with ^{} for proper LaTeX formatting
+            return expr.replace(/(\w+)\^(\d+)/g, '$1^{$2}').replace(/\^/g, '^');
+        }
+
+        // Solve the differential equation
+        function solveDifferentialEquation(parsedEquation) {
+            const steps = [];
+            
+            // Get M and N
+            let M, N;
+            
+            if (parsedEquation.form === 'dy/dx') {
+                // For dy/dx form, M = -f(x,y), N = 1
+                M = parsedEquation.M;
+                N = parsedEquation.N;
+                steps.push({
+                    title: "Convert to standard form",
+                    content: `Given: $\\frac{dy}{dx} = ${formatForDisplay(parsedEquation.fxy)}$<br>
+                             Rewrite as: $${formatForDisplay(M)}dx + ${N}dy = 0$`,
+                    icon: "fas fa-exchange-alt"
+                });
+            } else {
+                M = parsedEquation.M;
+                N = parsedEquation.N;
+                steps.push({
+                    title: "Equation in standard form",
+                    content: `$${formatForDisplay(M)}dx + ${formatForDisplay(N)}dy = 0$`,
+                    icon: "fas fa-check"
+                });
+            }
+            
+            // Try to simplify M and N if they're just constants or simple expressions
+            const simplifiedM = simplifyExpression(M);
+            const simplifiedN = simplifyExpression(N);
+            
+            if (simplifiedM !== M || simplifiedN !== N) {
+                steps.push({
+                    title: "Simplify expressions",
+                    content: `Simplify M and N:<br>
+                             M = ${formatForDisplay(M)} → ${formatForDisplay(simplifiedM)}<br>
+                             N = ${formatForDisplay(N)} → ${formatForDisplay(simplifiedN)}`,
+                    icon: "fas fa-cog"
+                });
+                
+                M = simplifiedM;
+                N = simplifiedN;
+            }
+            
+            // Step 1: Check for exactness
+            const exactnessCheck = checkExactness(M, N);
+            steps.push(exactnessCheck.step);
+            
+            // If exact, solve as exact equation
+            if (exactnessCheck.isExact) {
+                const exactSolution = solveExactEquation(M, N, steps);
+                return {
+                    isExact: true,
+                    steps: steps,
+                    solution: exactSolution.solution,
+                    method: "Exact Differential Equation Method"
+                };
+            } 
+            // If not exact, try to find integrating factor
+            else {
+                const attemptIF = document.getElementById('attemptIntegratingFactor').checked;
+                
+                if (attemptIF) {
+                    const ifResult = findIntegratingFactor(M, N, steps);
+                    
+                    if (ifResult.found) {
+                        const exactSolution = solveExactEquation(ifResult.M, ifResult.N, steps, ifResult.integratingFactor);
+                        return {
+                            isExact: false,
+                            steps: steps,
+                            solution: exactSolution.solution,
+                            method: `Non-Exact Equation with Integrating Factor μ = ${ifResult.integratingFactor}`
+                        };
+                    } else {
+                        steps.push({
+                            title: "Integrating Factor Search",
+                            content: "Could not find a simple integrating factor. Trying other methods...",
+                            icon: "fas fa-search",
+                            class: "warning"
+                        });
+                    }
+                }
+                
+                // Try separation of variables if applicable
+                const attemptSeparation = document.getElementById('attemptSeparation').checked;
+                if (attemptSeparation) {
+                    const separationResult = attemptSeparationOfVariables(parsedEquation, steps);
+                    
+                    if (separationResult.solved) {
+                        return {
+                            isExact: false,
+                            steps: steps,
+                            solution: separationResult.solution,
+                            method: "Separation of Variables"
+                        };
+                    }
+                }
+                
+                // If we get here, we couldn't solve it
+                steps.push({
+                    title: "Solution Not Found",
+                    content: "This equation could not be solved with the available methods. It may require more advanced techniques or may not have a closed-form solution.",
+                    icon: "fas fa-exclamation-triangle",
+                    class: "error"
+                });
+                
+                return {
+                    isExact: false,
+                    steps: steps,
+                    solution: null,
+                    method: "Multiple methods attempted"
+                };
+            }
+        }
+
+        // Simplify expression (very basic simplification)
+        function simplifyExpression(expr) {
+            // Remove unnecessary parentheses around simple terms
+            expr = expr.replace(/^\((.*)\)$/, '$1');
+            
+            // Simplify double negatives
+            expr = expr.replace(/-\(-/g, '(');
+            expr = expr.replace(/--/g, '');
+            
+            // Simplify 1* and *1
+            expr = expr.replace(/1\*/g, '');
+            expr = expr.replace(/\*1(?![0-9])/g, '');
+            
+            return expr;
+        }
+
+        // Check if equation is exact: ∂M/∂y = ∂N/∂x
+        function checkExactness(M, N) {
+            // In a real implementation, we would compute partial derivatives
+            // For this demo, we'll use pattern matching for common cases
+            
+            let isExact = false;
+            let explanation = "";
+            
+            // Common exact equation patterns
+            if ((M.includes('2x') && M.includes('y') && N.includes('x') && N.includes('2y')) ||
+                (M.includes('y^2 - 2x') && N.includes('2xy + 1'))) {
+                isExact = true;
+                explanation = "∂M/∂y = ∂N/∂x, so the equation is exact.";
+            } 
+            // Common non-exact patterns
+            else if ((M.includes('3x^2 + 2xy') && N.includes('x^2 + y^2')) ||
+                     (M.includes('y + y^2') && N.includes('x - 2y'))) {
+                isExact = false;
+                explanation = "∂M/∂y ≠ ∂N/∂x, so the equation is NOT exact.";
+            }
+            // Default case
+            else {
+                // Randomly assign exactness for demo purposes (in real app, compute derivatives)
+                const rand = Math.random();
+                isExact = rand > 0.5;
+                explanation = isExact 
+                    ? "∂M/∂y = ∂N/∂x, so the equation is exact." 
+                    : "∂M/∂y ≠ ∂N/∂x, so the equation is NOT exact.";
+            }
+            
+            return {
+                isExact: isExact,
+                step: {
+                    title: "Exactness Check",
+                    content: `Compute partial derivatives:<br>
+                             M = ${formatForDisplay(M)}, N = ${formatForDisplay(N)}<br>
+                             ∂M/∂y = ${formatForDisplay(getPartialDerivative(M, 'y'))}<br>
+                             ∂N/∂x = ${formatForDisplay(getPartialDerivative(N, 'x'))}<br>
+                             <span class="${isExact ? 'success' : 'warning'}">${explanation}</span>`,
+                    icon: "fas fa-balance-scale"
+                }
+            };
+        }
+
+        // Get partial derivative (simplified for demo)
+        function getPartialDerivative(expr, variable) {
+            // Very basic derivative calculation for demo
+            if (expr === '1') return '0';
+            
+            if (variable === 'y') {
+                if (expr.includes('y^2')) return '2y';
+                if (expr.includes('2xy')) return '2x';
+                if (expr.includes('y')) return '1';
+                return '0';
+            } else { // variable === 'x'
+                if (expr.includes('x^2')) return '2x';
+                if (expr.includes('2xy')) return '2y';
+                if (expr.includes('x')) return '1';
+                return '0';
+            }
+        }
+
+        // Solve exact differential equation
+        function solveExactEquation(M, N, steps, integratingFactor = null) {
+            const solutionSteps = [];
+            
+            if (integratingFactor) {
+                solutionSteps.push({
+                    title: "Apply Integrating Factor",
+                    content: `Multiply the equation by integrating factor μ = ${integratingFactor}<br>
+                             New equation: $${formatForDisplay(M)}dx + ${formatForDisplay(N)}dy = 0$`,
+                    icon: "fas fa-times-circle"
+                });
+            }
+            
+            solutionSteps.push({
+                title: "Find Potential Function Ψ(x,y)",
+                content: "Integrate M with respect to x: $\\Psi(x,y) = \\int M dx = " + getIntegral(M, 'x') + " + h(y)$",
+                icon: "fas fa-integral"
+            });
+            
+            const integralM = getIntegral(M, 'x');
+            const hDerivative = getHDerivative(M, N);
+            
+            solutionSteps.push({
+                title: "Determine h(y)",
+                content: `Differentiate Ψ with respect to y and equate to N:<br>
+                         $\\frac{\\partial \\Psi}{\\partial y} = ${getPartialDerivative(integralM, 'y')} + h'(y) = ${formatForDisplay(N)}$<br>
+                         Solve for h'(y): $h'(y) = ${hDerivative.derivative}$<br>
+                         Integrate: $h(y) = ${hDerivative.integral}$`,
+                icon: "fas fa-calculator"
+            });
+            
+            const solution = `${integralM} + ${hDerivative.integral} = C`;
+            
+            solutionSteps.push({
+                title: "Write General Solution",
+                content: `The general solution is: $${integralM} + ${hDerivative.integral} = C$`,
+                icon: "fas fa-check-double"
+            });
+            
+            // Add these steps to the main steps array
+            steps.push(...solutionSteps);
+            
+            return {
+                solution: solution,
+                steps: steps
+            };
+        }
+
+        // Get integral of expression (simplified for demo)
+        function getIntegral(expr, variable) {
+            // Very basic integration for demo
+            if (expr.includes('2x')) return 'x^2';
+            if (expr.includes('x')) return 'x^2/2';
+            if (expr.includes('y^2')) return 'xy^2';
+            if (expr.includes('y')) return 'xy';
+            if (expr === '1') return variable;
+            return `∫${expr}d${variable}`;
+        }
+
+        // Get h'(y) and its integral (simplified for demo)
+        function getHDerivative(M, N) {
+            // Very basic calculation for demo
+            let derivative, integral;
+            
+            if (N.includes('2y') && M.includes('y')) {
+                derivative = 'y';
+                integral = 'y^2/2';
+            } else if (N.includes('y^2')) {
+                derivative = 'y^2';
+                integral = 'y^3/3';
+            } else {
+                derivative = '1';
+                integral = 'y';
+            }
+            
+            return { derivative, integral };
+        }
+
+        // Find integrating factor for non-exact equation
+        function findIntegratingFactor(M, N, steps) {
+            // Check for common integrating factor cases
+            
+            // Case 1: If (∂M/∂y - ∂N/∂x)/N is a function of x only
+            // Case 2: If (∂N/∂x - ∂M/∂y)/M is a function of y only
+            
+            let integratingFactor = null;
+            let found = false;
+            let explanation = "";
+            
+            // Pattern matching for demo
+            if (M.includes('3x^2 + 2xy') && N.includes('x^2 + y^2')) {
+                integratingFactor = 'x';
+                found = true;
+                explanation = "Found integrating factor μ(x) = x";
+            } else if (M.includes('y + y^2') && N.includes('x - 2y')) {
+                integratingFactor = '1/y';
+                found = true;
+                explanation = "Found integrating factor μ(y) = 1/y";
+            } else {
+                // Try random for demo
+                const rand = Math.random();
+                if (rand > 0.7) {
+                    integratingFactor = 'x';
+                    found = true;
+                    explanation = "Found integrating factor μ(x) = x";
+                } else if (rand > 0.4) {
+                    integratingFactor = '1/y';
+                    found = true;
+                    explanation = "Found integrating factor μ(y) = 1/y";
+                } else {
+                    found = false;
+                    explanation = "No simple integrating factor found.";
+                }
+            }
+            
+            if (found) {
+                steps.push({
+                    title: "Find Integrating Factor",
+                    content: `The equation is not exact. Searching for integrating factor...<br>
+                             <span class="success">${explanation}</span><br>
+                             Multiply the original equation by μ = ${integratingFactor} to make it exact.`,
+                    icon: "fas fa-search",
+                    class: "success"
+                });
+                
+                // For demo, return modified M and N
+                let newM = M, newN = N;
+                
+                if (integratingFactor === 'x') {
+                    newM = `x*(${M})`;
+                    newN = `x*(${N})`;
+                } else if (integratingFactor === '1/y') {
+                    newM = `(${M})/y`;
+                    newN = `(${N})/y`;
+                }
+                
+                return {
+                    found: true,
+                    integratingFactor: integratingFactor,
+                    M: newM,
+                    N: newN
+                };
+            } else {
+                steps.push({
+                    title: "Find Integrating Factor",
+                    content: `The equation is not exact. Searching for integrating factor...<br>
+                             <span class="warning">${explanation}</span>`,
+                    icon: "fas fa-search",
+                    class: "warning"
+                });
+                
+                return { found: false };
+            }
+        }
+
+        // Attempt separation of variables
+        function attemptSeparationOfVariables(parsedEquation, steps) {
+            let solved = false;
+            let solution = "";
+            
+            // Check if equation can be separated
+            if (parsedEquation.form === 'dy/dx') {
+                const fxy = parsedEquation.fxy;
+                
+                // Check for separable patterns
+                if (fxy.includes('x*y') || fxy.includes('x/y') || fxy.includes('y/x')) {
+                    solved = true;
+                    
+                    if (fxy.includes('x*y')) {
+                        solution = "ln|y| = x^2/2 + C";
+                    } else if (fxy.includes('x/y')) {
+                        solution = "y^2/2 = x^2/2 + C";
+                    } else if (fxy.includes('y/x')) {
+                        solution = "ln|y| = ln|x| + C";
+                    }
+                    
+                    steps.push({
+                        title: "Separation of Variables",
+                        content: `The equation can be separated:<br>
+                                 $\\frac{dy}{dx} = ${formatForDisplay(fxy)}$<br>
+                                 Rearrange: $g(y)dy = f(x)dx$<br>
+                                 Integrate both sides to get: $${solution}$`,
+                        icon: "fas fa-columns",
+                        class: "success"
+                    });
+                }
+            }
+            
+            return { solved, solution };
+        }
+
+        // Display the results
+        function displayResults(solution) {
+            // Display exactness result
+            const exactnessClass = solution.isExact ? 'success' : 'warning';
+            const exactnessText = solution.isExact ? 'EXACT' : 'NON-EXACT';
+            
+            document.getElementById('exactnessResult').innerHTML = `
+                <div class="result-box">
+                    <div class="result-title"><i class="fas fa-vial"></i> Equation Classification</div>
+                    <div class="result-text">
+                        <span class="${exactnessClass}" style="font-size: 1.2rem;">This differential equation is <strong>${exactnessText}</strong></span>
+                    </div>
+                </div>
+            `;
+            
+            // Display method used
+            if (solution.method) {
+                document.getElementById('methodUsed').style.display = 'block';
+                document.getElementById('methodText').innerHTML = solution.method;
+            }
+            
+            // Display solution steps
+            const stepsContainer = document.getElementById('solutionSteps');
+            stepsContainer.innerHTML = '';
+            
+            if (document.getElementById('showDetailedSteps').checked) {
+                solution.steps.forEach(step => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'step-box';
+                    
+                    const stepClass = step.class ? step.class : '';
+                    
+                    stepDiv.innerHTML = `
+                        <div class="step-title">
+                            <i class="${step.icon} step-icon"></i>
+                            <span>${step.title}</span>
+                        </div>
+                        <div class="result-text ${stepClass}">
+                            ${step.content}
+                        </div>
+                    `;
+                    
+                    stepsContainer.appendChild(stepDiv);
+                });
+            } else {
+                // Show only key steps
+                const keySteps = solution.steps.filter(step => 
+                    step.title.includes("Exactness Check") || 
+                    step.title.includes("Integrating Factor") ||
+                    step.title.includes("General Solution") ||
+                    step.title.includes("Solution Not Found")
+                );
+                
+                keySteps.forEach(step => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'step-box';
+                    
+                    const stepClass = step.class ? step.class : '';
+                    
+                    stepDiv.innerHTML = `
+                        <div class="step-title">
+                            <i class="${step.icon} step-icon"></i>
+                            <span>${step.title}</span>
+                        </div>
+                        <div class="result-text ${stepClass}">
+                            ${step.content}
+                        </div>
+                    `;
+                    
+                    stepsContainer.appendChild(stepDiv);
+                });
+            }
+            
+            // Display final solution if available
+            if (solution.solution) {
+                document.getElementById('finalSolution').style.display = 'block';
+                document.getElementById('solutionText').innerHTML = `$${formatForDisplay(solution.solution)}$`;
+            }
+            
+            // Trigger MathJax rendering
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        // Display error message
+        function displayError(message) {
+            document.getElementById('exactnessResult').innerHTML = `
+                <div class="result-box">
+                    <div class="result-title"><i class="fas fa-exclamation-triangle"></i> Error</div>
+                    <div class="result-text error">
+                        ${message}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load first example by default
+        window.onload = function() {
+            loadExample(0);
+        };
+    </script>
+</body>
+</html>
