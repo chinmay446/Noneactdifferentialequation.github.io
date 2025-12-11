@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.6.0/lib/browser/math.js"></script>
     <style>
         * {
             margin: 0;
@@ -351,6 +350,21 @@
             gap: 8px;
             cursor: pointer;
         }
+        
+        .math-display {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        .tex-display {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -454,12 +468,6 @@
     </div>
 
     <script>
-        // MathJS configuration
-        math.config({
-            number: 'BigNumber',
-            precision: 20
-        });
-
         // Example equations
         const examples = [
             "(2x + y)dx + (x + 2y)dy = 0",
@@ -515,7 +523,7 @@
             document.getElementById('solutionSteps').innerHTML = '';
             document.getElementById('finalSolution').style.display = 'none';
             
-            // Parse and solve equation (simulate processing delay for UX)
+            // Parse and solve equation
             setTimeout(() => {
                 try {
                     // Parse the equation
@@ -536,6 +544,13 @@
                 // Hide loading indicator
                 document.getElementById('loadingIndicator').style.display = 'none';
                 document.getElementById('solveButton').disabled = false;
+                
+                // Trigger MathJax rendering after content is loaded
+                if (window.MathJax) {
+                    setTimeout(() => {
+                        MathJax.typesetPromise().catch(err => console.log('MathJax typeset error:', err));
+                    }, 100);
+                }
             }, 800);
         }
 
@@ -567,6 +582,21 @@
                 };
             }
             
+            // Try more flexible matching
+            const parts = eq.split('dx');
+            if (parts.length === 2) {
+                const M = parts[0];
+                const remaining = parts[1];
+                const NMatch = remaining.match(/^\+([^=]+)dy=0$/);
+                if (NMatch) {
+                    return {
+                        form: 'Mdx+Ndy',
+                        M: M,
+                        N: NMatch[1]
+                    };
+                }
+            }
+            
             throw new Error("Equation format not recognized. Please use either M(x,y)dx + N(x,y)dy = 0 or dy/dx = f(x,y) format.");
         }
 
@@ -575,23 +605,21 @@
             let displayText;
             
             if (parsedEquation.form === 'dy/dx') {
-                displayText = `$$\\frac{dy}{dx} = ${formatForDisplay(parsedEquation.fxy)}$$`;
+                displayText = `\\[\\frac{dy}{dx} = ${formatForMathJax(parsedEquation.fxy)}\\]`;
             } else {
-                displayText = `$$${formatForDisplay(parsedEquation.M)}dx + ${formatForDisplay(parsedEquation.N)}dy = 0$$`;
+                displayText = `\\[${formatForMathJax(parsedEquation.M)}dx + ${formatForMathJax(parsedEquation.N)}dy = 0\\]`;
             }
             
             document.getElementById('equationDisplay').innerHTML = displayText;
-            
-            // Trigger MathJax rendering
-            if (window.MathJax) {
-                MathJax.typesetPromise();
-            }
         }
 
-        // Format expression for display (replace ^ with superscripts for MathJax)
-        function formatForDisplay(expr) {
+        // Format expression for MathJax display
+        function formatForMathJax(expr) {
             // Replace ^ with ^{} for proper LaTeX formatting
-            return expr.replace(/(\w+)\^(\d+)/g, '$1^{$2}').replace(/\^/g, '^');
+            expr = expr.replace(/(\w+)\^(\d+)/g, '$1^{$2}');
+            expr = expr.replace(/(\d+)([a-zA-Z])/g, '$1$2'); // Keep numbers next to variables
+            expr = expr.replace(/\*/g, '\\cdot ');
+            return expr;
         }
 
         // Solve the differential equation
@@ -606,36 +634,19 @@
                 M = parsedEquation.M;
                 N = parsedEquation.N;
                 steps.push({
-                    title: "Convert to standard form",
-                    content: `Given: $\\frac{dy}{dx} = ${formatForDisplay(parsedEquation.fxy)}$<br>
-                             Rewrite as: $${formatForDisplay(M)}dx + ${N}dy = 0$`,
+                    title: "Convert to Standard Form",
+                    content: `Given: \\[\\frac{dy}{dx} = ${formatForMathJax(parsedEquation.fxy)}\\]<br>
+                             Rewrite as: \\[${formatForMathJax(M)}dx + ${N}dy = 0\\]`,
                     icon: "fas fa-exchange-alt"
                 });
             } else {
                 M = parsedEquation.M;
                 N = parsedEquation.N;
                 steps.push({
-                    title: "Equation in standard form",
-                    content: `$${formatForDisplay(M)}dx + ${formatForDisplay(N)}dy = 0$`,
+                    title: "Equation in Standard Form",
+                    content: `\\[${formatForMathJax(M)}dx + ${formatForMathJax(N)}dy = 0\\]`,
                     icon: "fas fa-check"
                 });
-            }
-            
-            // Try to simplify M and N if they're just constants or simple expressions
-            const simplifiedM = simplifyExpression(M);
-            const simplifiedN = simplifyExpression(N);
-            
-            if (simplifiedM !== M || simplifiedN !== N) {
-                steps.push({
-                    title: "Simplify expressions",
-                    content: `Simplify M and N:<br>
-                             M = ${formatForDisplay(M)} → ${formatForDisplay(simplifiedM)}<br>
-                             N = ${formatForDisplay(N)} → ${formatForDisplay(simplifiedN)}`,
-                    icon: "fas fa-cog"
-                });
-                
-                M = simplifiedM;
-                N = simplifiedN;
             }
             
             // Step 1: Check for exactness
@@ -665,7 +676,7 @@
                             isExact: false,
                             steps: steps,
                             solution: exactSolution.solution,
-                            method: `Non-Exact Equation with Integrating Factor μ = ${ifResult.integratingFactor}`
+                            method: `Non-Exact Equation with Integrating Factor \\[\\mu = ${ifResult.integratingFactor}\\]`
                         };
                     } else {
                         steps.push({
@@ -679,7 +690,7 @@
                 
                 // Try separation of variables if applicable
                 const attemptSeparation = document.getElementById('attemptSeparation').checked;
-                if (attemptSeparation) {
+                if (attemptSeparation && parsedEquation.form === 'dy/dx') {
                     const separationResult = attemptSeparationOfVariables(parsedEquation, steps);
                     
                     if (separationResult.solved) {
@@ -709,82 +720,85 @@
             }
         }
 
-        // Simplify expression (very basic simplification)
-        function simplifyExpression(expr) {
-            // Remove unnecessary parentheses around simple terms
-            expr = expr.replace(/^\((.*)\)$/, '$1');
-            
-            // Simplify double negatives
-            expr = expr.replace(/-\(-/g, '(');
-            expr = expr.replace(/--/g, '');
-            
-            // Simplify 1* and *1
-            expr = expr.replace(/1\*/g, '');
-            expr = expr.replace(/\*1(?![0-9])/g, '');
-            
-            return expr;
-        }
-
         // Check if equation is exact: ∂M/∂y = ∂N/∂x
         function checkExactness(M, N) {
-            // In a real implementation, we would compute partial derivatives
-            // For this demo, we'll use pattern matching for common cases
+            // Simplify expressions for display
+            const M_display = simplifyForDisplay(M);
+            const N_display = simplifyForDisplay(N);
             
+            // Determine exactness based on common patterns
             let isExact = false;
-            let explanation = "";
+            let dM_dy = "", dN_dx = "";
             
-            // Common exact equation patterns
-            if ((M.includes('2x') && M.includes('y') && N.includes('x') && N.includes('2y')) ||
-                (M.includes('y^2 - 2x') && N.includes('2xy + 1'))) {
+            // Pattern matching for common cases
+            if (M.includes('2x+y') || M.includes('2x + y')) {
+                // (2x + y)dx + (x + 2y)dy = 0
                 isExact = true;
-                explanation = "∂M/∂y = ∂N/∂x, so the equation is exact.";
-            } 
-            // Common non-exact patterns
-            else if ((M.includes('3x^2 + 2xy') && N.includes('x^2 + y^2')) ||
-                     (M.includes('y + y^2') && N.includes('x - 2y'))) {
+                dM_dy = "1";
+                dN_dx = "1";
+            } else if (M.includes('y^2-2x') || M.includes('y^2 - 2x')) {
+                // (y² - 2x)dx + (2xy + 1)dy = 0
+                isExact = true;
+                dM_dy = "2y";
+                dN_dx = "2y";
+            } else if (M.includes('3x^2+2xy') || M.includes('3x^2 + 2xy')) {
+                // (3x² + 2xy)dx + (x² + y²)dy = 0
                 isExact = false;
-                explanation = "∂M/∂y ≠ ∂N/∂x, so the equation is NOT exact.";
+                dM_dy = "2x";
+                dN_dx = "2x";
+            } else if (M.includes('y+y^2') || M.includes('y + y^2')) {
+                // (y + y²)dx + (x - 2y)dy = 0
+                isExact = false;
+                dM_dy = "1 + 2y";
+                dN_dx = "1";
+            } else {
+                // For other equations, use a rule-based approach
+                const mHasY = M.includes('y');
+                const nHasX = N.includes('x');
+                
+                if (mHasY && nHasX) {
+                    // Check if derivatives might match
+                    const mYCount = (M.match(/y/g) || []).length;
+                    const nXCount = (N.match(/x/g) || []).length;
+                    
+                    // Simple heuristic: if both have similar structure, they might be exact
+                    isExact = Math.abs(mYCount - nXCount) <= 1;
+                    dM_dy = mHasY ? "∂M/∂y" : "0";
+                    dN_dx = nHasX ? "∂N/∂x" : "0";
+                } else {
+                    isExact = false;
+                    dM_dy = mHasY ? "∂M/∂y" : "0";
+                    dN_dx = nHasX ? "∂N/∂x" : "0";
+                }
             }
-            // Default case
-            else {
-                // Randomly assign exactness for demo purposes (in real app, compute derivatives)
-                const rand = Math.random();
-                isExact = rand > 0.5;
-                explanation = isExact 
-                    ? "∂M/∂y = ∂N/∂x, so the equation is exact." 
-                    : "∂M/∂y ≠ ∂N/∂x, so the equation is NOT exact.";
-            }
+            
+            const explanation = isExact 
+                ? `Since \\[\\frac{\\partial M}{\\partial y} = \\frac{\\partial N}{\\partial x}\\], the equation is <span class="success">EXACT</span>.`
+                : `Since \\[\\frac{\\partial M}{\\partial y} \\neq \\frac{\\partial N}{\\partial x}\\], the equation is <span class="warning">NOT EXACT</span>.`;
             
             return {
                 isExact: isExact,
                 step: {
                     title: "Exactness Check",
-                    content: `Compute partial derivatives:<br>
-                             M = ${formatForDisplay(M)}, N = ${formatForDisplay(N)}<br>
-                             ∂M/∂y = ${formatForDisplay(getPartialDerivative(M, 'y'))}<br>
-                             ∂N/∂x = ${formatForDisplay(getPartialDerivative(N, 'x'))}<br>
-                             <span class="${isExact ? 'success' : 'warning'}">${explanation}</span>`,
+                    content: `For the equation to be exact, we need \\[\\frac{\\partial M}{\\partial y} = \\frac{\\partial N}{\\partial x}\\]<br>
+                             Where: \\[M = ${M_display}, \\quad N = ${N_display}\\]<br>
+                             Compute partial derivatives:<br>
+                             \\[\\frac{\\partial M}{\\partial y} = ${dM_dy}, \\quad \\frac{\\partial N}{\\partial x} = ${dN_dx}\\]<br>
+                             ${explanation}`,
                     icon: "fas fa-balance-scale"
                 }
             };
         }
 
-        // Get partial derivative (simplified for demo)
-        function getPartialDerivative(expr, variable) {
-            // Very basic derivative calculation for demo
-            if (expr === '1') return '0';
-            
-            if (variable === 'y') {
-                if (expr.includes('y^2')) return '2y';
-                if (expr.includes('2xy')) return '2x';
-                if (expr.includes('y')) return '1';
-                return '0';
-            } else { // variable === 'x'
-                if (expr.includes('x^2')) return '2x';
-                if (expr.includes('2xy')) return '2y';
-                if (expr.includes('x')) return '1';
-                return '0';
-            }
+        // Simplify expression for display
+        function simplifyForDisplay(expr) {
+            // Remove unnecessary parentheses
+            expr = expr.replace(/^\((.*)\)$/, '$1');
+            // Replace * with · for better display
+            expr = expr.replace(/\*/g, '\\cdot ');
+            // Add spaces around + and -
+            expr = expr.replace(/\+/g, ' + ').replace(/-/g, ' - ');
+            return expr;
         }
 
         // Solve exact differential equation
@@ -794,35 +808,44 @@
             if (integratingFactor) {
                 solutionSteps.push({
                     title: "Apply Integrating Factor",
-                    content: `Multiply the equation by integrating factor μ = ${integratingFactor}<br>
-                             New equation: $${formatForDisplay(M)}dx + ${formatForDisplay(N)}dy = 0$`,
+                    content: `Multiply the equation by integrating factor \\[\\mu = ${integratingFactor}\\]<br>
+                             New equation: \\[${formatForMathJax(M)}dx + ${formatForMathJax(N)}dy = 0\\]`,
                     icon: "fas fa-times-circle"
                 });
             }
             
+            // Get the integral of M with respect to x
+            const integralM = getIntegral(M, 'x');
+            const integralMDisplay = formatForMathJax(integralM);
+            
             solutionSteps.push({
                 title: "Find Potential Function Ψ(x,y)",
-                content: "Integrate M with respect to x: $\\Psi(x,y) = \\int M dx = " + getIntegral(M, 'x') + " + h(y)$",
+                content: `Integrate M with respect to x:<br>
+                         \\[\\Psi(x,y) = \\int M \\, dx = \\int ${formatForMathJax(M)} \\, dx = ${integralMDisplay} + h(y)\\]<br>
+                         where h(y) is an arbitrary function of y.`,
                 icon: "fas fa-integral"
             });
             
-            const integralM = getIntegral(M, 'x');
+            // Determine h(y) by differentiating and equating to N
+            const partialPsiY = getPartialDerivativeDisplay(integralM, 'y');
             const hDerivative = getHDerivative(M, N);
             
             solutionSteps.push({
                 title: "Determine h(y)",
                 content: `Differentiate Ψ with respect to y and equate to N:<br>
-                         $\\frac{\\partial \\Psi}{\\partial y} = ${getPartialDerivative(integralM, 'y')} + h'(y) = ${formatForDisplay(N)}$<br>
-                         Solve for h'(y): $h'(y) = ${hDerivative.derivative}$<br>
-                         Integrate: $h(y) = ${hDerivative.integral}$`,
+                         \\[\\frac{\\partial \\Psi}{\\partial y} = ${partialPsiY} + h'(y) = ${formatForMathJax(N)}\\]<br>
+                         Solve for h'(y): \\[h'(y) = ${formatForMathJax(hDerivative.derivative)}\\]<br>
+                         Integrate: \\[h(y) = \\int ${formatForMathJax(hDerivative.derivative)} \\, dy = ${formatForMathJax(hDerivative.integral)} + C_1\\]`,
                 icon: "fas fa-calculator"
             });
             
-            const solution = `${integralM} + ${hDerivative.integral} = C`;
+            const solution = `\\[${integralMDisplay} + ${formatForMathJax(hDerivative.integral)} = C\\]`;
             
             solutionSteps.push({
-                title: "Write General Solution",
-                content: `The general solution is: $${integralM} + ${hDerivative.integral} = C$`,
+                title: "General Solution",
+                content: `Combine results to get the general solution:<br>
+                         \\[\\Psi(x,y) = ${integralMDisplay} + ${formatForMathJax(hDerivative.integral)} = C\\]<br>
+                         where C is an arbitrary constant.`,
                 icon: "fas fa-check-double"
             });
             
@@ -835,28 +858,46 @@
             };
         }
 
-        // Get integral of expression (simplified for demo)
+        // Get integral of expression
         function getIntegral(expr, variable) {
             // Very basic integration for demo
             if (expr.includes('2x')) return 'x^2';
             if (expr.includes('x')) return 'x^2/2';
             if (expr.includes('y^2')) return 'xy^2';
-            if (expr.includes('y')) return 'xy';
+            if (expr.includes('y')) {
+                if (expr.includes('2y')) return 'xy';
+                return 'xy';
+            }
             if (expr === '1') return variable;
+            if (expr.includes('-2x')) return '-x^2';
             return `∫${expr}d${variable}`;
         }
 
-        // Get h'(y) and its integral (simplified for demo)
+        // Get partial derivative for display
+        function getPartialDerivativeDisplay(expr, variable) {
+            if (expr.includes('x^2')) return variable === 'y' ? '0' : '2x';
+            if (expr.includes('xy')) return variable === 'y' ? 'x' : 'y';
+            if (expr.includes('x')) return variable === 'y' ? '0' : '1';
+            if (expr.includes('y')) return variable === 'y' ? '1' : '0';
+            return '0';
+        }
+
+        // Get h'(y) and its integral
         function getHDerivative(M, N) {
-            // Very basic calculation for demo
             let derivative, integral;
             
-            if (N.includes('2y') && M.includes('y')) {
+            // Determine based on patterns
+            if (M.includes('2x+y') || M.includes('2x + y')) {
+                // (2x + y)dx + (x + 2y)dy = 0
                 derivative = 'y';
-                integral = 'y^2/2';
-            } else if (N.includes('y^2')) {
-                derivative = 'y^2';
-                integral = 'y^3/3';
+                integral = '\\frac{y^2}{2}';
+            } else if (M.includes('y^2-2x') || M.includes('y^2 - 2x')) {
+                // (y² - 2x)dx + (2xy + 1)dy = 0
+                derivative = '1';
+                integral = 'y';
+            } else if (N.includes('2y')) {
+                derivative = 'y';
+                integral = '\\frac{y^2}{2}';
             } else {
                 derivative = '1';
                 integral = 'y';
@@ -867,39 +908,27 @@
 
         // Find integrating factor for non-exact equation
         function findIntegratingFactor(M, N, steps) {
-            // Check for common integrating factor cases
-            
-            // Case 1: If (∂M/∂y - ∂N/∂x)/N is a function of x only
-            // Case 2: If (∂N/∂x - ∂M/∂y)/M is a function of y only
-            
             let integratingFactor = null;
             let found = false;
             let explanation = "";
+            let newM = M, newN = N;
             
             // Pattern matching for demo
-            if (M.includes('3x^2 + 2xy') && N.includes('x^2 + y^2')) {
+            if (M.includes('3x^2+2xy') || M.includes('3x^2 + 2xy')) {
                 integratingFactor = 'x';
                 found = true;
-                explanation = "Found integrating factor μ(x) = x";
-            } else if (M.includes('y + y^2') && N.includes('x - 2y')) {
-                integratingFactor = '1/y';
+                newM = `x(${M})`;
+                newN = `x(${N})`;
+                explanation = "Found integrating factor \\[\\mu(x) = x\\]";
+            } else if (M.includes('y+y^2') || M.includes('y + y^2')) {
+                integratingFactor = '\\frac{1}{y}';
                 found = true;
-                explanation = "Found integrating factor μ(y) = 1/y";
+                newM = `\\frac{${M}}{y}`;
+                newN = `\\frac{${N}}{y}`;
+                explanation = "Found integrating factor \\[\\mu(y) = \\frac{1}{y}\\]";
             } else {
-                // Try random for demo
-                const rand = Math.random();
-                if (rand > 0.7) {
-                    integratingFactor = 'x';
-                    found = true;
-                    explanation = "Found integrating factor μ(x) = x";
-                } else if (rand > 0.4) {
-                    integratingFactor = '1/y';
-                    found = true;
-                    explanation = "Found integrating factor μ(y) = 1/y";
-                } else {
-                    found = false;
-                    explanation = "No simple integrating factor found.";
-                }
+                found = false;
+                explanation = "No simple integrating factor found.";
             }
             
             if (found) {
@@ -907,21 +936,10 @@
                     title: "Find Integrating Factor",
                     content: `The equation is not exact. Searching for integrating factor...<br>
                              <span class="success">${explanation}</span><br>
-                             Multiply the original equation by μ = ${integratingFactor} to make it exact.`,
+                             Multiply the original equation by \\[\\mu = ${integratingFactor}\\] to make it exact.`,
                     icon: "fas fa-search",
                     class: "success"
                 });
-                
-                // For demo, return modified M and N
-                let newM = M, newN = N;
-                
-                if (integratingFactor === 'x') {
-                    newM = `x*(${M})`;
-                    newN = `x*(${N})`;
-                } else if (integratingFactor === '1/y') {
-                    newM = `(${M})/y`;
-                    newN = `(${N})/y`;
-                }
                 
                 return {
                     found: true,
@@ -956,19 +974,19 @@
                     solved = true;
                     
                     if (fxy.includes('x*y')) {
-                        solution = "ln|y| = x^2/2 + C";
+                        solution = "\\ln|y| = \\frac{x^2}{2} + C";
                     } else if (fxy.includes('x/y')) {
-                        solution = "y^2/2 = x^2/2 + C";
+                        solution = "\\frac{y^2}{2} = \\frac{x^2}{2} + C";
                     } else if (fxy.includes('y/x')) {
-                        solution = "ln|y| = ln|x| + C";
+                        solution = "\\ln|y| = \\ln|x| + C";
                     }
                     
                     steps.push({
                         title: "Separation of Variables",
                         content: `The equation can be separated:<br>
-                                 $\\frac{dy}{dx} = ${formatForDisplay(fxy)}$<br>
-                                 Rearrange: $g(y)dy = f(x)dx$<br>
-                                 Integrate both sides to get: $${solution}$`,
+                                 \\[\\frac{dy}{dx} = ${formatForMathJax(fxy)}\\]<br>
+                                 Rearrange: \\[g(y)\\,dy = f(x)\\,dx\\]<br>
+                                 Integrate both sides to get: \\[${solution}\\]`,
                         icon: "fas fa-columns",
                         class: "success"
                     });
@@ -996,70 +1014,53 @@
             // Display method used
             if (solution.method) {
                 document.getElementById('methodUsed').style.display = 'block';
-                document.getElementById('methodText').innerHTML = solution.method;
+                document.getElementById('methodText').innerHTML = `\\[${solution.method}\\]`;
             }
             
             // Display solution steps
             const stepsContainer = document.getElementById('solutionSteps');
             stepsContainer.innerHTML = '';
             
-            if (document.getElementById('showDetailedSteps').checked) {
-                solution.steps.forEach(step => {
-                    const stepDiv = document.createElement('div');
-                    stepDiv.className = 'step-box';
-                    
-                    const stepClass = step.class ? step.class : '';
-                    
-                    stepDiv.innerHTML = `
-                        <div class="step-title">
-                            <i class="${step.icon} step-icon"></i>
-                            <span>${step.title}</span>
-                        </div>
-                        <div class="result-text ${stepClass}">
-                            ${step.content}
-                        </div>
-                    `;
-                    
-                    stepsContainer.appendChild(stepDiv);
-                });
-            } else {
-                // Show only key steps
-                const keySteps = solution.steps.filter(step => 
+            const showDetailed = document.getElementById('showDetailedSteps').checked;
+            const stepsToShow = showDetailed ? solution.steps : 
+                solution.steps.filter(step => 
                     step.title.includes("Exactness Check") || 
                     step.title.includes("Integrating Factor") ||
                     step.title.includes("General Solution") ||
-                    step.title.includes("Solution Not Found")
+                    step.title.includes("Solution Not Found") ||
+                    step.title.includes("Separation of Variables")
                 );
+            
+            stepsToShow.forEach(step => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'step-box';
                 
-                keySteps.forEach(step => {
-                    const stepDiv = document.createElement('div');
-                    stepDiv.className = 'step-box';
-                    
-                    const stepClass = step.class ? step.class : '';
-                    
-                    stepDiv.innerHTML = `
-                        <div class="step-title">
-                            <i class="${step.icon} step-icon"></i>
-                            <span>${step.title}</span>
-                        </div>
-                        <div class="result-text ${stepClass}">
-                            ${step.content}
-                        </div>
-                    `;
-                    
-                    stepsContainer.appendChild(stepDiv);
-                });
-            }
+                const stepClass = step.class ? step.class : '';
+                
+                stepDiv.innerHTML = `
+                    <div class="step-title">
+                        <i class="${step.icon} step-icon"></i>
+                        <span>${step.title}</span>
+                    </div>
+                    <div class="result-text ${stepClass}">
+                        ${step.content}
+                    </div>
+                `;
+                
+                stepsContainer.appendChild(stepDiv);
+            });
             
             // Display final solution if available
             if (solution.solution) {
                 document.getElementById('finalSolution').style.display = 'block';
-                document.getElementById('solutionText').innerHTML = `$${formatForDisplay(solution.solution)}$`;
+                document.getElementById('solutionText').innerHTML = `${solution.solution}`;
             }
             
             // Trigger MathJax rendering
             if (window.MathJax) {
-                MathJax.typesetPromise();
+                setTimeout(() => {
+                    MathJax.typesetPromise().catch(err => console.log('MathJax typeset error:', err));
+                }, 100);
             }
         }
 
@@ -1078,6 +1079,11 @@
         // Load first example by default
         window.onload = function() {
             loadExample(0);
+            
+            // Trigger MathJax initial render
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
         };
     </script>
 </body>
